@@ -13,10 +13,12 @@ import h5py, os
 from EEGInception import EEGInception
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import OneHotEncoder
-
+from model import TimeSeriesTransformer
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 #%% PARAMETERS
 
-dataset_path = 'PATH TO DATASET (hdf5 file)'
+dataset_path = 'E:/Knowledge/资料/Dataset/eegdata/erp/eeg-inception/data.hdf5'
+
 
 #%% HYPERPARAMETERS
 
@@ -47,30 +49,26 @@ hf.close()
 
 #%% PREPARE FEATURES AND LABELS
 # Reshape epochs for EEG-Inception
-features = features.reshape(
-    (features.shape[0], features.shape[1],
-     features.shape[2], 1)
-)
+# features = features.reshape(
+#     (features.shape[0], features.shape[1],
+#      features.shape[2], 1)
+# )
 
 
-# One hot encoding of labels
-def one_hot_labels(caategorical_labels):
-    enc = OneHotEncoder(handle_unknown='ignore')
-    on_hot_labels = enc.fit_transform(
-        caategorical_labels.reshape(-1, 1)).toarray()
-    return on_hot_labels
-
-
-train_erp_labels = one_hot_labels(erp_labels)
+train_erp_labels = erp_labels
 
 #%%  TRAINING
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
 # Create model
-model = EEGInception(
-    input_time=1000, fs=128, ncha=8, filters_per_branch=8,
-    scales_time=(500, 250, 125), dropout_rate=0.25,
-    activation='elu', n_classes=2, learning_rate=0.001)
+# model = EEGInception(
+#     input_time=1000, fs=128, ncha=8, filters_per_branch=8,
+#     scales_time=(500, 250, 125), dropout_rate=0.25,
+#     activation='elu', n_classes=2, learning_rate=0.001)
+
+model = TimeSeriesTransformer(input_length=128,
+                                  embed_dim=8, num_heads=1, ff_dim=32,
+                                  classes=1, dense_units=20, dropout_rate=0.5)
 
 # Print model summary
 model.summary()
@@ -82,12 +80,20 @@ early_stopping = EarlyStopping(
     restore_best_weights=True)
 
 # Fit model
-fit_hist = model.fit(features,
-                     erp_labels,
-                     epochs=500,
-                     batch_size=1024,
-                     validation_split=0.2,
-                     callbacks=[early_stopping])
+# fit_hist = model.fit(features,
+#                      erp_labels,
+#                      epochs=500,
+#                      batch_size=1024,
+#                      validation_split=0.2,
+#                      callbacks=[early_stopping])
+
+model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
+Model = model.fit(features, erp_labels,
+          epochs=50,
+          batch_size=2,
+          verbose=1,
+          validation_split=0.2,
+          callbacks=[early_stopping])
 
 # Save
 model.save('model')
