@@ -122,7 +122,7 @@ def EEGInception(input_time=1000, fs=128, ncha=8, filters_per_branch=8,
     model = keras.models.Model(inputs=input_layer, outputs=output_layer)
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate, beta_1=0.9,
                                       beta_2=0.999, amsgrad=False)
-    model.compile(loss='binary_crossentropy', optimizer=optimizer,
+    model.compile(loss='sparse_categorical_crossentropy', optimizer=optimizer,
                   metrics=['accuracy'])
     return model
 
